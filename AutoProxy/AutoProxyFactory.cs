@@ -10,13 +10,44 @@ namespace AutoProxy
     public class AutoProxyFactory
     {
         public const string NAME = nameof(AutoProxyFactory);
+        public const string DLL_NAME = nameof(AutoProxyFactory) + "Module.dll";
+
+        protected Type BaseInvokerOfT;
+        protected AssemblyName AseName;
+        protected AssemblyBuilder AseBuilder;
+        protected ModuleBuilder ModBuilder;
+
+        public AutoProxyFactory(Type baseInvoker)
+        {
+            if (null == baseInvoker)
+                throw new ArgumentNullException(nameof(baseInvoker));
+
+            Type baseOfT = baseInvoker.GetInterface(typeof(IBaseAutoProxyInvoker<>).Name);
+            bool bIsFromIBaseInvoker = null != baseOfT && 1 == baseOfT.GetGenericArguments().Length;
+            if (!bIsFromIBaseInvoker)
+                throw new NotSupportedException(Literals.BaseClassDoesNotImplementIBaseWcfInvokerOfT);
+
+            this.BaseInvokerOfT = baseInvoker;
+            this.AseName = new AssemblyName($"{NAME}Assembly");
+            this.AseBuilder = AppDomain.CurrentDomain
+                .DefineDynamicAssembly(this.AseName, AssemblyBuilderAccess.RunAndSave, "c:\\Temp\\");
+            this.ModBuilder = this.AseBuilder
+                .DefineDynamicModule($"{NAME}Module", DLL_NAME);
+        }
+
+        public void RegisterProxyBase<T>()
+        {
+        }
 
         public T CreateProxy<T>() where T: class
         {
-            return this.CreateProxyClassForType<T>();
+            Type t = this.CreateProxyClassForType<T>();
+            
+            T response = (T)Activator.CreateInstance(t);
+            return response;
         }
 
-        protected T CreateProxyClassForType<T>() where T : class
+        public Type CreateProxyClassForType<T>() where T : class
         {
             Type tType = typeof(T);
             if (!tType.IsInterface)
@@ -24,15 +55,12 @@ namespace AutoProxy
             if (!tType.IsPublic)
                 throw new NotSupportedException(Literals.TypeTMustBePublic);
 
-            string sDllName = $"{NAME}Module.dll";
-            Type baseOfT = typeof(BaseWcfInvoker<T>);
+            Type baseOfT = this.BaseInvokerOfT;
+            bool bIsFromIBaseInvoker = null != baseOfT.GetInterface(typeof(IBaseAutoProxyInvoker<T>).Name);
+            if (!bIsFromIBaseInvoker)
+                throw new NotSupportedException(Literals.BaseClassDoesNotImplementIBaseWcfInvokerOfT);
 
-            AssemblyName assemblyName = new AssemblyName($"{NAME}Assembly");
-            AssemblyBuilder assemblyBuilder = AppDomain.CurrentDomain
-                .DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.RunAndSave,"c:\\Temp\\");
-            ModuleBuilder moduleBuilder = assemblyBuilder
-                .DefineDynamicModule($"{NAME}Module", sDllName);
-            TypeBuilder typeBuilder = moduleBuilder.DefineType(
+            TypeBuilder typeBuilder = this.ModBuilder.DefineType(
                 $"{NAME}{tType.Name}", 
                 TypeAttributes.Class,
                 baseOfT,
@@ -49,10 +77,9 @@ namespace AutoProxy
                     CreateVoidMethod(tType, baseOfT, typeBuilder, tMethod);
             }
 
-            Type t = typeBuilder.CreateType();
-            assemblyBuilder.Save(sDllName);
+            Type response = typeBuilder.CreateType();
+            this.AseBuilder.Save(DLL_NAME);
 
-            T response = (T)Activator.CreateInstance(t);
             return response;
         }
 
@@ -80,7 +107,20 @@ namespace AutoProxy
                 new Type[] { tType }
                 );
 
+            ConstructorInfo argumentNullExceptionCtor = typeof(ArgumentNullException)
+                .GetConstructor(new Type[] { typeof(string) });
+
             ILGenerator nil = nestedMethodBuilder.GetILGenerator();
+            Label notNullLabel = nil.DefineLabel();
+            nil.Emit(OpCodes.Ldarg_1);
+            nil.Emit(OpCodes.Ldnull);
+            nil.Emit(OpCodes.Ceq);
+            nil.Emit(OpCodes.Brfalse, notNullLabel);
+            nil.Emit(OpCodes.Ldstr, "proxy");
+            nil.Emit(OpCodes.Newobj, argumentNullExceptionCtor);
+            nil.Emit(OpCodes.Throw);
+
+            nil.MarkLabel(notNullLabel);
             nil.Emit(OpCodes.Ldarg_1);
             foreach (FieldBuilder nesField in nestedFields)
             {
@@ -155,7 +195,20 @@ namespace AutoProxy
                 new Type[] { tType }
                 );
 
+            ConstructorInfo argumentNullExceptionCtor = typeof(ArgumentNullException)
+                .GetConstructor(new Type[] { typeof(string) });
+
             ILGenerator nil = nestedMethodBuilder.GetILGenerator();
+            Label notNullLabel = nil.DefineLabel();
+            nil.Emit(OpCodes.Ldarg_1);
+            nil.Emit(OpCodes.Ldnull);
+            nil.Emit(OpCodes.Ceq);
+            nil.Emit(OpCodes.Brfalse, notNullLabel);
+            nil.Emit(OpCodes.Ldstr, "proxy");
+            nil.Emit(OpCodes.Newobj, argumentNullExceptionCtor);
+            nil.Emit(OpCodes.Throw);
+
+            nil.MarkLabel(notNullLabel);
             nil.Emit(OpCodes.Ldarg_1);
             foreach (FieldBuilder nesField in nestedFields)
             {

@@ -32,8 +32,6 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Runtime.Serialization" />
-    <Reference Include="System.ServiceModel" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -42,8 +40,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AutoProxyFactory.cs" />
-    <Compile Include="BaseWcfInvoker.cs" />
-    <Compile Include="IBaseWcfInvoker.cs" />
+    <Compile Include="IBaseAutoProxyInvoker.cs" />
     <Compile Include="Literals.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>

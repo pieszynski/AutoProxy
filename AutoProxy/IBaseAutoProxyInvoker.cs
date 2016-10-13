@@ -5,7 +5,7 @@ using System.Text;
 
 namespace AutoProxy
 {
-    public interface IBaseWcfInvoker<TService>
+    public interface IBaseAutoProxyInvoker<TService>
     {
         T Invoke<T>(Func<TService, T> callback);
         void Invoke(Action<TService> callback);

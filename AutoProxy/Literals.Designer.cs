@@ -61,6 +61,15 @@ namespace AutoProxy {
         }
         
         /// <summary>
+        ///   Looks up a localized string similar to Base class does not implement IBaseWcfInvoker&lt;T&gt;.
+        /// </summary>
+        internal static string BaseClassDoesNotImplementIBaseWcfInvokerOfT {
+            get {
+                return ResourceManager.GetString("BaseClassDoesNotImplementIBaseWcfInvokerOfT", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   Looks up a localized string similar to Type &lt;T&gt; must be interface..
         /// </summary>
         internal static string TypeTMustBeInterface {

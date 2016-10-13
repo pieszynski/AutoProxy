@@ -18,10 +18,11 @@ namespace AutoProxy.UnitTests
         public void CreateProxy()
         {
             // Arrange
-            AutoProxyFactory factory = new AutoProxyFactory();
+            AutoProxyFactory factory = new AutoProxyFactory(typeof(NullInvoker<IFewMethods>));
 
             // Act
             IFewMethods proxy = factory.CreateProxy<IFewMethods>();
+            proxy.MakeIt("asdf");
             proxy.Sum("4s", 5);
 
             // Assert
@@ -29,13 +30,16 @@ namespace AutoProxy.UnitTests
         }
     }
 
-    class BB : BaseWcfInvoker<IFewMethods>, IFewMethods
+    class BB : NullInvoker<IFewMethods>, IFewMethods
     {
         class DCMakeIt
         {
             public object o;
             public void MakeIt(IFewMethods proxy)
             {
+                if (null == proxy)
+                    throw new ArgumentNullException(nameof(proxy));
+
                 proxy.MakeIt(o);
             }
         }
@@ -53,6 +57,9 @@ namespace AutoProxy.UnitTests
             public int b;
             public string Sum(IFewMethods proxy)
             {
+                if (null == proxy)
+                    return default(string);
+
                 return proxy.Sum(a, b);
             }
         }
