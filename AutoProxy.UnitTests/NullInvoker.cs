@@ -9,13 +9,11 @@ namespace AutoProxy.UnitTests
     {
         public T Invoke<T>(Func<TService, T> callback)
         {
-            //return callback(default(TService));
             return default(T);
         }
 
         public void Invoke(Action<TService> callback)
         {
-            //callback(default(TService));
         }
     }
 }

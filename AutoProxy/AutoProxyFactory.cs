@@ -16,7 +16,12 @@ namespace AutoProxy
         protected AssemblyName AseName;
         protected AssemblyBuilder AseBuilder;
         protected ModuleBuilder ModBuilder;
+        protected Dictionary<Type,Type> CreatedTypes;
 
+        /// <summary>
+        /// AutoProxyFactory constructor.
+        /// </summary>
+        /// <param name="baseInvoker">Typ klasy bazowej dziedziczącej z IBaseAutoProxyInvoker&lt;T&gt;.</param>
         public AutoProxyFactory(Type baseInvoker)
         {
             if (null == baseInvoker)
@@ -30,13 +35,10 @@ namespace AutoProxy
             this.BaseInvokerOfT = baseInvoker;
             this.AseName = new AssemblyName($"{NAME}Assembly");
             this.AseBuilder = AppDomain.CurrentDomain
-                .DefineDynamicAssembly(this.AseName, AssemblyBuilderAccess.RunAndSave, "c:\\Temp\\");
+                .DefineDynamicAssembly(this.AseName, AssemblyBuilderAccess.RunAndCollect);//, "c:\\Temp\\");
             this.ModBuilder = this.AseBuilder
                 .DefineDynamicModule($"{NAME}Module", DLL_NAME);
-        }
-
-        public void RegisterProxyBase<T>()
-        {
+            this.CreatedTypes = new Dictionary<Type, Type>();
         }
 
         public T CreateProxy<T>() where T: class
@@ -49,13 +51,18 @@ namespace AutoProxy
 
         public Type CreateProxyClassForType<T>() where T : class
         {
+            Type response;
             Type tType = typeof(T);
+
+            if (this.CreatedTypes.TryGetValue(tType, out response))
+                return response;
+
             if (!tType.IsInterface)
                 throw new NotSupportedException(Literals.TypeTMustBeInterface);
             if (!tType.IsPublic)
                 throw new NotSupportedException(Literals.TypeTMustBePublic);
 
-            Type baseOfT = this.BaseInvokerOfT;
+            Type baseOfT = this.BaseInvokerOfT.MakeGenericType(tType);
             bool bIsFromIBaseInvoker = null != baseOfT.GetInterface(typeof(IBaseAutoProxyInvoker<T>).Name);
             if (!bIsFromIBaseInvoker)
                 throw new NotSupportedException(Literals.BaseClassDoesNotImplementIBaseWcfInvokerOfT);
@@ -77,9 +84,10 @@ namespace AutoProxy
                     CreateVoidMethod(tType, baseOfT, typeBuilder, tMethod);
             }
 
-            Type response = typeBuilder.CreateType();
-            this.AseBuilder.Save(DLL_NAME);
+            response = typeBuilder.CreateType();
+            //this.AseBuilder.Save(DLL_NAME);
 
+            this.CreatedTypes.Add(tType, response);
             return response;
         }
 
