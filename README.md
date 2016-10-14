@@ -16,15 +16,37 @@ MResponse response = autoProxy.Method();
 
 ## Jak zacząć
 
+Podstawowe użycie
 ```csharp
 // Przygotowanie fabryki klas pośrednich.
 //  WcfInvoker<> to klasa umożliwiająca komunikację przez WCF
 //  dla dowolnego kontraktu <TService>
 //
-AutoProxyFactory factory = new AutoProxyFactory(typeof(WcfInvoker<>));
+IAutoProxyFactory factory = new AutoProxyFactory(typeof(WcfInvoker<>));
 
 // Stworzenie klasy pośredniej
 IContract proxy = factory.CreateProxy<IContract>();
+
+// Wygodne użycie dowolnej metody kontraktu
+MResponse response = proxy.Method();
+```
+
+Użycie w połączeniu z biblioteką do wstrzykiwania zależności(DI)
+```csharp
+// Przygotowanie fabryki klas pośrednich.
+//  DIWcfInvoker<> to klasa umożliwiająca komunikację przez WCF
+//  dla dowolnego kontraktu <TService> ale potrzebuje podania
+//  w konstruktorze zależności ILogger
+//
+IAutoProxyFactory factory = new AutoProxyFactory(typeof(DIWcfInvoker<>));
+
+// przygotowanie zależności na przykładzie biblioteki SimpleInjector
+SimpleInjector.Container container = new SimpleInjector.Container();
+container.Register<IUnitLogger, ServiceLogger>();
+container.Register(typeof(IContract), factory.GetProxyClassForType<IContract>());
+
+// Stworzenie klasy pośredniej
+IContract proxy = container.GetInstance<IContract>();
 
 // Wygodne użycie dowolnej metody kontraktu
 MResponse response = proxy.Method();
@@ -77,5 +99,4 @@ public class WcfInvoker<TService> : IBaseAutoProxyInvoker<TService>
 
 ## ToDo
 
-* Dostosowanie do bibliotek oferujących wstrzykiwanie zależności(DI)
 * Obsługa metod &lt;T&gt;, parametrów domyślnych, ref i out.

@@ -7,7 +7,7 @@ using System.Text;
 
 namespace AutoProxy
 {
-    public class AutoProxyFactory
+    public class AutoProxyFactory : IAutoProxyFactory
     {
         public const string NAME = nameof(AutoProxyFactory);
         public const string DLL_NAME = nameof(AutoProxyFactory) + "Module.dll";
@@ -43,13 +43,13 @@ namespace AutoProxy
 
         public T CreateProxy<T>() where T: class
         {
-            Type t = this.CreateProxyClassForType<T>();
+            Type t = this.GetProxyClassForType<T>();
             
             T response = (T)Activator.CreateInstance(t);
             return response;
         }
 
-        public Type CreateProxyClassForType<T>() where T : class
+        public Type GetProxyClassForType<T>() where T : class
         {
             Type response;
             Type tType = typeof(T);
@@ -74,6 +74,29 @@ namespace AutoProxy
                 new Type[] { tType }
                 );
 
+            // stworzenie konstruktorów
+            foreach (ConstructorInfo ctori in baseOfT.GetConstructors())
+            {
+                Type[] ctorParamTypes = ctori.GetParameters().Select(s => s.ParameterType).ToArray();
+
+                ConstructorBuilder ctorBuilder = typeBuilder.DefineConstructor(
+                    ctori.Attributes,
+                    ctori.CallingConvention,
+                    ctorParamTypes
+                    );
+                
+                ILGenerator cil = ctorBuilder.GetILGenerator();
+                cil.Emit(OpCodes.Ldarg_0);
+                for (int i = 1; i <= ctorParamTypes.Length; i++)
+                {
+                    cil.Emit(OpCodes.Ldarg, i);
+                }
+                cil.Emit(OpCodes.Call, ctori);
+                cil.Emit(OpCodes.Ret);
+
+            }
+
+            // tworzenie metod-przelotek
             foreach(MethodInfo tMethod in tType.GetMethods())
             {
                 bool bMethodReturns = typeof(void) != tMethod.ReturnType;

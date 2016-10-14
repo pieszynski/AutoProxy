@@ -18,11 +18,31 @@ namespace AutoProxy.UnitTests
         public void CreateProxy()
         {
             // Arrange
-            AutoProxyFactory factory = new AutoProxyFactory(typeof(NullInvoker<>));
+            IAutoProxyFactory factory = new AutoProxyFactory(typeof(NullInvoker<>));
 
             // Act
             IFewMethods proxy = factory.CreateProxy<IFewMethods>();
             proxy = factory.CreateProxy<IFewMethods>();
+            proxy.MakeIt("asdf");
+            string nullSum = proxy.Sum("4s", 5);
+
+            // Assert
+            Assert.NotNull(proxy);
+            Assert.Null(nullSum);
+        }
+
+        [Fact]
+        public void CreateProxyWithDependencyInjection()
+        {
+            // Arrange
+            IAutoProxyFactory factory = new AutoProxyFactory(typeof(DINullInvoker<>));
+
+            SimpleInjector.Container container = new SimpleInjector.Container();
+            container.Register<IUnitLogger, NullLogger>();
+            container.Register(typeof(IFewMethods), factory.GetProxyClassForType<IFewMethods>());
+            
+            // Act
+            IFewMethods proxy = container.GetInstance<IFewMethods>();
             proxy.MakeIt("asdf");
             string nullSum = proxy.Sum("4s", 5);
 
