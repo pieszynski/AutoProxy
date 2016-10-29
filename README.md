@@ -110,6 +110,10 @@ Projekt realizujacy podobne zadanie w zasadzie już istnieje - `Castle.DynamicPr
 
 static void Main(string[] args)
 {
+    // zgodnie z zaleceniem twórców jeśli proces będzie długo istniał
+    //  a tworzonych będzie wiele obiektów proxy należy używać tej
+    //  samej instancji "ProxyGenerator" inaczej nie będzie używany
+    //  cache obiektów oraz ciągłe zwiększanie się używanej pamięci
     var pg = new Castle.DynamicProxy.ProxyGenerator();
 
     // użycie metody .CreateInterfaceProxyWithTargetInterface() 
@@ -127,9 +131,11 @@ public class MyLoggerInterceptor : IInterceptor
 {
     public void Intercept(IInvocation invocation)
     {
-        IChangeProxyTarget change = invocation as IChangeProxyTarget;
         if (null == invocation.InvocationTarget)
         {
+            // jeśli nie użyto metody .CreateInterfaceProxyWithTargetInterface()
+            // to zmienna "change" będzie NULL!
+            IChangeProxyTarget change = invocation as IChangeProxyTarget;
             // zmiana proxy tylko dla tego żądania
             change.ChangeInvocationTarget(new Logger());
             // zmiana proxy na zawsze (ale nie dla tego żądania! tylko dla kolejnych)
