@@ -102,3 +102,41 @@ public class WcfInvoker<TService> : IBaseAutoProxyInvoker<TService>
 ## ToDo
 
 * Obsługa metod &lt;T&gt;, parametrów domyślnych, ref i out.
+
+## Napisy końcowe
+Projekt realizujacy podobne zadanie w zasadzie już istnieje - `Castle.DynamicProxy` (nuget: Castle.Core). Podobne oczekiwania jak wyżej można osiągnąć w poniższy sposób a sam projekt `AutoProxy` służył tylko temu aby sprawdzić ile pracy potrzeba samemu na stworzenie mniej więcej czegoś podobnego. Tworzenie kodu w IL jest arcyniewygodne a obiektów Expression nie można użyć do tworzenia ciała metod niestatycznych (Expression.Lambda.CompileToMethod()) bo Expression nie ma możliwości uzyskania "this" - wszystko jest wyjaśnione w [DLR: CompileToMethod does not support instance methods, constructors, dynamicmethods](http://dlr.codeplex.com/workitem/1378?ProjectName=dlr).
+
+```csharp
+
+static void Main(string[] args)
+{
+    var pg = new Castle.DynamicProxy.ProxyGenerator();
+
+    // użycie metody .CreateInterfaceProxyWithTargetInterface() 
+    //  pozwala na podmianę proxy w interceptorze
+    //  korzystając z interfejsu IChangeProxyTarget
+    ILogger logger = pg.CreateInterfaceProxyWithTargetInterface<ILogger>(
+        null,
+        new MyLoggerInterceptor()
+        );
+
+    logger.Log("trololo");
+}
+
+public class MyLoggerInterceptor : IInterceptor
+{
+    public void Intercept(IInvocation invocation)
+    {
+        IChangeProxyTarget change = invocation as IChangeProxyTarget;
+        if (null == invocation.InvocationTarget)
+        {
+            // zmiana proxy tylko dla tego żądania
+            change.ChangeInvocationTarget(new Logger());
+            // zmiana proxy na zawsze (ale nie dla tego żądania! tylko dla kolejnych)
+            change.ChangeProxyTarget(new Logger());
+        }
+        
+        invocation.Proceed();            
+    }
+}
+```
